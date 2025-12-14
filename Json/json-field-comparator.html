@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JSON Field Comparator</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.min.css">
+<style>
+    .missing-json1 { background-color: #fff9c4; } /* yellow */
+    .missing-json2 { background-color: #c8e6c9; } /* light green */
+    .json-input { width: 100%; height: 150px; }
+    .error-message { color: red; font-size: 0.9em; margin-top: 5px; }
+
+    /* Table styles */
+    table { 
+        width: 100%; 
+        border-collapse: collapse; 
+        position: relative; 
+        font-size: 0.85em; /* Reduced font size for mapped fields table */
+        table-layout: fixed; /* Helps wrap long content */
+    }
+
+    th, td { 
+        padding: 8px; 
+        border: 1px solid #ddd; 
+        cursor: pointer;
+        word-wrap: break-word; /* Wrap long text */
+        overflow-wrap: break-word;
+    }
+
+    .highlight-field { background-color: #ffd54f; } /* highlight clicked field */
+    pre span { display: block; }
+    
+    #mappedTable tbody tr:hover { 
+        background-color: #e0f7fa; 
+        cursor: pointer;
+    }
+    svg { pointer-events:none; }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        table, thead, tbody, th, td, tr {
+            display: block;
+        }
+        th, td {
+            text-align: left;
+            padding: 4px;
+        }
+        tr {
+            margin-bottom: 8px;
+        }
+        #mappingLines {
+            display: none; /* Hide SVG lines on small screens to avoid overflow */
+        }
+    }
+</style>
+
+</head>
+<body>
+<div class="container">
+<h2>JSON Field Comparator</h2>
+
+<!-- Level 1: JSON Input -->
+<div class="row">
+    <div class="column column-50">
+        <h4>JSON 1</h4>
+        <textarea id="json1" class="json-input" placeholder='Paste JSON 1 here'></textarea>
+        <div id="error1" class="error-message"></div>
+    </div>
+    <div class="column column-50">
+        <h4>JSON 2</h4>
+        <textarea id="json2" class="json-input" placeholder='Paste JSON 2 here'></textarea>
+        <div id="error2" class="error-message"></div>
+    </div>
+</div>
+<button onclick="processJSON()">Compare JSON Fields</button>
+
+<!-- Level 2: Sorted JSON -->
+<h3>Sorted JSON Structures</h3>
+<div class="row">
+    <div class="column column-50">
+        <pre id="sortedJson1"></pre>
+    </div>
+    <div class="column column-50">
+        <pre id="sortedJson2"></pre>
+    </div>
+</div>
+
+<!-- Level 3: Mapped Fields -->
+<h3>Mapped Fields</h3>
+
+<div style="margin-bottom: 10px;">
+    <strong>Legend:</strong>
+    <span style="background-color:#fff9c4;padding:2px 6px;margin-right:5px;">Missing in JSON1</span>
+    <span style="background-color:#c8e6c9;padding:2px 6px;margin-right:5px;">Missing in JSON2</span>
+</div>
+
+<div style="position:relative;">
+    <svg id="mappingLines" style="position:absolute;top:0;left:0;width:100%;height:100%;"></svg>
+    <table id="mappedTable">
+        <thead>
+            <tr>
+                <th>JSON 1 Field</th>
+                <th>JSON 1 Value</th>
+                <th>JSON 2 Field</th>
+                <th>JSON 2 Value</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<!-- Footer -->
+<footer style="margin-top: 50px; font-size: small;">
+    <p>Developed by YourName | <a href="#">GitHub</a> | <a href="#">Docs</a></p>
+</footer>
+</div>
+
+<script>
+function processJSON() {
+    let json1Text = document.getElementById('json1');
+    let json2Text = document.getElementById('json2');
+    let error1 = document.getElementById('error1');
+    let error2 = document.getElementById('error2');
+
+    let obj1, obj2;
+    json1Text.style.backgroundColor = '';
+    json2Text.style.backgroundColor = '';
+    error1.textContent = '';
+    error2.textContent = '';
+
+    try { obj1 = JSON.parse(json1Text.value); }
+    catch (e) { json1Text.style.backgroundColor='#ffcccc'; error1.textContent=`Invalid JSON: ${e.message}`; return; }
+
+    try { obj2 = JSON.parse(json2Text.value); }
+    catch (e) { json2Text.style.backgroundColor='#ffcccc'; error2.textContent=`Invalid JSON: ${e.message}`; return; }
+
+    const sortKeys = obj => {
+        if(typeof obj!=='object'||obj===null) return obj;
+        if(Array.isArray(obj)) return obj.map(sortKeys);
+        const sorted={};
+        Object.keys(obj).sort().forEach(k=>{ sorted[k]=sortKeys(obj[k]); });
+        return sorted;
+    }
+
+    const sorted1 = sortKeys(obj1);
+    const sorted2 = sortKeys(obj2);
+
+    document.getElementById('sortedJson1').innerHTML = formatJSONWithSpans(sorted1, 'json1');
+    document.getElementById('sortedJson2').innerHTML = formatJSONWithSpans(sorted2, 'json2');
+
+    const fields1 = extractFields(sorted1);
+    const fields2 = extractFields(sorted2);
+
+    const allFields = Array.from(new Set([...fields1,...fields2])).sort();
+
+    const tbody = document.getElementById('mappedTable').querySelector('tbody');
+    tbody.innerHTML = "";
+
+    allFields.forEach(field => {
+        if(!fields1.includes(field) && !fields2.includes(field)) return; // Skip missing-both
+
+        const tr = document.createElement('tr');
+
+        const td1 = document.createElement('td'); td1.textContent = field;
+        const td2 = document.createElement('td'); td2.textContent = getValueByPath(sorted1, field);
+        const td3 = document.createElement('td'); td3.textContent = field;
+        const td4 = document.createElement('td'); td4.textContent = getValueByPath(sorted2, field);
+
+        if(!fields1.includes(field)) tr.classList.add('missing-json1');
+        if(!fields2.includes(field)) tr.classList.add('missing-json2');
+
+        tr.onclick = () => { highlightFieldBothJSONs(field); };
+
+        tr.append(td1, td2, td3, td4);
+        tbody.appendChild(tr);
+    });
+
+    drawMappingLines();
+}
+
+function extractFields(obj,prefix="",level=1){
+    if(level>3||typeof obj!=='object'||obj===null) return [];
+    let fields=[];
+    for(let key of Object.keys(obj)){
+        let fullKey = prefix ? `${prefix}.${key}` : key;
+        fields.push(fullKey);
+        fields = fields.concat(extractFields(obj[key], fullKey, level+1));
+    }
+    return fields;
+}
+
+// Format JSON to HTML with <span> and unique ids
+function formatJSONWithSpans(obj, jsonId, prefix="",level=1){
+    if(level>3||typeof obj!=='object'||obj===null) return JSON.stringify(obj);
+    if(Array.isArray(obj)){
+        return '[\n'+obj.map(v=>'  '+formatJSONWithSpans(v,jsonId,prefix,level+1)).join(',\n')+'\n]';
+    }
+    let result='{<br>';
+    for(let key of Object.keys(obj)){
+        let fullKey = prefix ? `${prefix}.${key}` : key;
+        let id = fullKey.replace(/\./g,'_');
+        result += `  <span id="${jsonId}_${id}">${key}: ${formatJSONWithSpans(obj[key],jsonId,fullKey,level+1)}</span><br>`;
+    }
+    result += '}';
+    return result;
+}
+
+// Highlight field in both JSONs
+function highlightFieldBothJSONs(field){
+    const id = field.replace(/\./g,'_');
+    document.querySelectorAll('pre span').forEach(s=>s.classList.remove('highlight-field'));
+    const span1 = document.getElementById('json1_'+id);
+    if(span1){ span1.classList.add('highlight-field'); span1.scrollIntoView({behavior:'smooth',block:'center'}); }
+    const span2 = document.getElementById('json2_'+id);
+    if(span2){ span2.classList.add('highlight-field'); span2.scrollIntoView({behavior:'smooth',block:'center'}); }
+}
+
+function getValueByPath(obj, path) {
+    const parts = path.split('.');
+    let val = obj;
+    for(let p of parts) {
+        if(val && typeof val === 'object' && p in val) val = val[p];
+        else return '—';
+    }
+    return JSON.stringify(val);
+}
+
+// Draw connecting lines
+function drawMappingLines() {
+    const svg = document.getElementById('mappingLines');
+    svg.innerHTML = '';
+    const rows = document.querySelectorAll('#mappedTable tbody tr');
+    const tableRect = document.getElementById('mappedTable').getBoundingClientRect();
+
+    rows.forEach(row => {
+        const td1 = row.children[0];
+        const td3 = row.children[2];
+
+        const span1Id = td1.textContent.replace(/\./g,'_');
+        const span2Id = td3.textContent.replace(/\./g,'_');
+
+        const span1 = document.getElementById('json1_' + span1Id);
+        const span2 = document.getElementById('json2_' + span2Id);
+        if(!span1 || !span2) return;
+
+        const rect1 = span1.getBoundingClientRect();
+        const rect2 = span2.getBoundingClientRect();
+
+        const x1 = rect1.right - tableRect.left;
+        const y1 = rect1.top + rect1.height/2 - tableRect.top;
+        const x2 = rect2.left - tableRect.left;
+        const y2 = rect2.top + rect2.height/2 - tableRect.top;
+
+        const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        line.setAttribute('stroke', '#2196f3');
+        line.setAttribute('stroke-width', '1.5');
+        line.setAttribute('stroke-dasharray', '4,2');
+        svg.appendChild(line);
+    });
+}
+</script>
+</body>
+</html>

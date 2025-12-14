@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>JSON Alphabetical Sorter</title>
+
+  <!-- Milligram CSS -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.min.css"
+  />
+
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 1rem 2rem;
+      border-bottom: 1px solid #e1e1e1;
+    }
+
+    header h3 {
+      margin: 0;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+    }
+
+    .pane {
+      width: 50%;
+      padding: 1.5rem;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #e1e1e1;
+    }
+
+    .pane:last-child {
+      border-right: none;
+    }
+
+    textarea {
+      flex: 1;
+      font-family: monospace;
+      font-size: 0.9rem;
+      resize: none;
+    }
+
+    .controls {
+      margin-bottom: 1rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .error {
+      margin-top: 0.5rem;
+      color: #b00020;
+      white-space: pre-wrap;
+      font-size: 0.85rem;
+    }
+
+    footer {
+      padding: 0.75rem 2rem;
+      border-top: 1px solid #e1e1e1;
+      font-size: 0.8rem;
+      color: #666;
+      background: #fafafa;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h3>JSON Alphabetical Sorter</h3>
+</header>
+
+<main>
+  <section class="pane">
+    <div class="controls">
+      <button class="button-primary" onclick="sortJson()">Sort JSON</button>
+    </div>
+
+    <textarea
+      id="inputJson"
+      placeholder='{"b":2,"a":{"d":4,"c":3}}'
+    ></textarea>
+
+    <div id="error" class="error"></div>
+  </section>
+
+  <section class="pane">
+    <div class="controls">
+      <button onclick="copyOutput()">Copy Output</button>
+    </div>
+
+    <textarea id="outputJson" readonly></textarea>
+  </section>
+</main>
+
+<footer id="footer">
+  <!-- Footer content will be loaded dynamically -->
+</footer>
+
+<script>
+  function sortObjectKeys(value) {
+    if (Array.isArray(value)) {
+      return value.map(sortObjectKeys);
+    }
+
+    if (value !== null && typeof value === 'object') {
+      return Object.keys(value)
+        .sort()
+        .reduce((result, key) => {
+          result[key] = sortObjectKeys(value[key]);
+          return result;
+        }, {});
+    }
+
+    return value;
+  }
+
+  function sortJson() {
+    const input = document.getElementById('inputJson').value;
+    const output = document.getElementById('outputJson');
+    const error = document.getElementById('error');
+
+    error.textContent = '';
+    output.value = '';
+
+    try {
+      const parsed = JSON.parse(input);
+      const sorted = sortObjectKeys(parsed);
+      output.value = JSON.stringify(sorted, null, 2);
+    } catch (e) {
+      error.textContent = 'Invalid JSON:\n' + e.message;
+    }
+  }
+
+  function copyOutput() {
+    const output = document.getElementById('outputJson');
+    output.select();
+    document.execCommand('copy');
+  }
+
+  // Load footer content from external page
+  fetch('footer.html')
+    .then(response => response.text())
+    .then(html => {
+      document.getElementById('footer').innerHTML = html;
+    })
+    .catch(() => {
+      document.getElementById('footer').textContent =
+        '© Developer note unavailable.';
+    });
+</script>
+
+</body>
+</html>
+
+
