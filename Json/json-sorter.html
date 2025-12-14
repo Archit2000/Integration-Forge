@@ -104,9 +104,11 @@
   </section>
 </main>
 
-<footer id="footer">
-  <!-- Footer content will be loaded dynamically -->
+<!-- Footer -->
+<footer style="margin-top: 50px; font-size: small;">
+    <p>Developed by Archit Kane | <a href="https://github.com/Archit2000">GitHub</a> | <a href="https://github.com/Archit2000/Integration-Forge">Docs</a> | <a href="https://www.linkedin.com/in/archit-kane-589040195/">LinkedIn</a></p>
 </footer>
+</div>
 
 <script>
   function sortObjectKeys(value) {
@@ -149,16 +151,6 @@
     document.execCommand('copy');
   }
 
-  // Load footer content from external page
-  fetch('footer.html')
-    .then(response => response.text())
-    .then(html => {
-      document.getElementById('footer').innerHTML = html;
-    })
-    .catch(() => {
-      document.getElementById('footer').textContent =
-        '© Developer note unavailable.';
-    });
 </script>
 
 </body>
