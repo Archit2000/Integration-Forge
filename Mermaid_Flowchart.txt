@@ -1,0 +1,71 @@
+---
+config:
+  layout: elk
+  theme: base %%forest
+  themeVariables:
+    primaryColor: '#BB2528'
+    primaryTextColor: '#fff'
+    primaryBorderColor: '#7C0000'
+    lineColor: '#F8B229'
+    secondaryColor: '#006100'
+    tertiaryColor: '#fff'
+  markdownAutoWrap: false
+  flowchart:
+    curve: basis %%basis, bumpX, bumpY, cardinal, catmullRom, linear, monotoneX, monotoneY, natural, step, stepAfter, and stepBefore.
+title: Enter Title
+---
+%%Flow Chart Directions - TB, BT, RL, LR %%
+    flowchart TB
+
+%% Node Naming and Title%
+    n1(This is the text in the box)
+    n2([This is the text in the box])
+    n3[[This is the text in the box]]
+    n4[(Database)]
+    n5((This is the text in the circle))
+    n6>This is the text in the box]
+    n7{This is the text in the box}
+    n8{{This is the text in the box}}
+    n9[/This is the text in the box/]
+    n10[\This is the text in the box\]
+    n11[/Christmas\]
+    n12(((This is the text in the circle)))
+
+%% Assigning shapes to nodes
+    A@{ shape: cloud, label: "File Handling"}
+
+%% Assign Styles to nodes
+    style n5 fill:#BBDEFB
+    style n11 fill:#FFE0B2
+
+
+%%Creating Subgraphs
+    subgraph s1["Name Subgraph"]
+      direction TB
+      n11
+      n12
+    end
+    subgraph s2["Name Subgraph2"]
+        direction TB
+        n13
+        n14
+    end
+
+%% Assigning Links
+    %%Arrow types examples
+    %%  A o--o B
+    %%  B <--> C
+    %%  C x--x D
+    %%  A --x B
+
+    n1 --> n2
+    n3 --- n4
+    n5 -- This is Text! --> n6
+    n7-. text .-> n8
+    n9 == text ==> n10
+    n11 --> n12
+    n13-->n14
+    s1<-->s2
+
+
+    
